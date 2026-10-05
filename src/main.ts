@@ -114,17 +114,12 @@ async function main(): Promise<void> {
 // This is all well and good, but sometimes the source map lookup fails and it just barfs an extremely long minified source line which is
 // not only useless but makes the log much more annoying to read. This behavior is implemented in `GetErrorSource` in `node_errors.cc` and
 // seemingly cannot be disabled directly except by overriding the uncaught exception handler, so that's what we do. :/
-const actionIsUnderTest = !!process.env['__TEST_INVOCATION_ID'];
 process.on('uncaughtException', (err, origin) => {
     // We don't use core.error here as it causes the initialization order to get messed up and might not work as expected
-    let message: string = err.stack ?? `${err.message}:\n(Stack trace missing)`;
-    if (!actionIsUnderTest) {
-        message = message
-            .replaceAll('%', '%25')
-            .replaceAll('\r', '%0D')
-            .replaceAll('\n', '%0A')
-            ;
-    }
+    const message = (err.stack ?? `${err.message}:\n(Stack trace missing)`)
+        .replaceAll('%', '%25')
+        .replaceAll('\r', '%0D')
+        .replaceAll('\n', '%0A');
     process.stdout.write(`::error::${message}`);
     if (!process.exitCode) {
         process.exitCode = -1;
