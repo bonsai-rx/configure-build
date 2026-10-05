@@ -5,18 +5,21 @@ name: configure-build
 on:
   push:
     # This prevents tag pushes from triggering this workflow
-    branches: ['*']
+    branches: ['**']
+  pull_request:
   release:
     types: [published]
+permissions:
+  contents: read
 env:
   GIT_ADVICE: 0
 jobs:
-  verify-and-deploy:
-    name: Verify and deploy
+  # =====================================================================================================================================================================
+  # Verify
+  # =====================================================================================================================================================================
+  verify:
+    name: Verify
     runs-on: ubuntu-latest
-    permissions:
-      # Needed to bump tags
-      contents: write
     steps:
       # ----------------------------------------------------------------------- Checkout
       - name: Checkout
@@ -59,9 +62,34 @@ jobs:
           name: dist
           path: dist/**
 
+  # =====================================================================================================================================================================
+  # Bump major version tag
+  # =====================================================================================================================================================================
+  bump-tag:
+    name: Bump major version tag
+    runs-on: ubuntu-latest
+    needs: verify
+    if: github.event_name == 'release'
+    permissions:
+      # Needed to bump tags
+      contents: write
+    steps:
+      # ----------------------------------------------------------------------- Checkout
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      # ----------------------------------------------------------------------- Setup tools
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install action dependencies
+        run: npm ci --ignore-scripts
+
       # ----------------------------------------------------------------------- Bump major version tag
       - name: Bump major version tag
-        if: github.event_name == 'release'
         run: node .github/workflows/bump-tag.mjs
         env:
           TAG: ${{github.event.release.tag_name}}
