@@ -36,6 +36,9 @@ jobs:
       - name: Verify TypeScript
         run: npm run verify
 
+      - name: Run tests
+        run: npm test
+
       - name: Build main entrypoint
         run: npm run build
 

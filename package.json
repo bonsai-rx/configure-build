@@ -5,7 +5,8 @@
     "build": "npm run build-entrypoint -- src/main.ts --outfile=dist/main.js",
     "watch": "npm run build-entrypoint -- src/main.ts --outfile=dist/main.js --watch",
     "build-entrypoint": "esbuild --bundle --platform=node --target=node24 --minify --sourcemap --sources-content=false",
-    "verify": "tsc --noEmit"
+    "verify": "tsc --noEmit",
+    "test": "node --test \"src/**/*.test.ts\""
   },
   "dependencies": {
     "@actions/core": "^1.11.1",

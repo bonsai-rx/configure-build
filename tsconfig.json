@@ -5,7 +5,8 @@
     "module": "node18",
 
     "rootDir": "./src",
-    "outDir": "./dist-tsc",
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
 
     // Strictness
     "strict": true,
