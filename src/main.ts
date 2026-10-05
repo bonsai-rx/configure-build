@@ -5,7 +5,7 @@ import { RequestError } from '@octokit/request-error';
 import { strict as assert } from 'assert';
 import * as fs from 'fs';
 import { SemVer } from 'semver';
-import { getFallbackVersion, getReleaseVersion } from './version.ts';
+import { formatVersion, getFallbackVersion, getReleaseVersion } from './version.ts';
 
 async function getLatestReleaseTag(context: typeof github.context): Promise<string | null> {
     const token = core.getInput('repo-token', { required: true });
@@ -104,8 +104,8 @@ async function main(): Promise<void> {
     //==============================================================================================================================================================
     // Emit outputs
     //==============================================================================================================================================================
-    core.info(`Configuring build environment to build${isForRelease ? ' and release' : ''} version ${version.format()}`);
-    core.exportVariable('CiBuildVersion', version.format());
+    core.info(`Configuring build environment to build${isForRelease ? ' and release' : ''} version ${formatVersion(version)}`);
+    core.exportVariable('CiBuildVersion', formatVersion(version));
     core.exportVariable('CiIsForRelease', isForRelease ? 'true' : 'false');
     core.setOutput('need-workflow-image-render', needWorkflowImageRender ? 'true' : 'false');
 }

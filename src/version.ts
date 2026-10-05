@@ -38,6 +38,10 @@ export function getReleaseVersion(release: Release, log: Logger): SemVer {
         throw new Error(`The version to be released '${releaseVersionString}' indicates a pre-release version, but the release is not marked as a pre-release!`);
     }
 
+    if (version.prerelease.length > 0 && !isAllowedPrerelease(version.prerelease)) {
+        throw new Error(`The version to be released '${releaseVersionString}' has pre-release '${version.prerelease.join('.')}', but only alpha.N, beta.N or rc.N are allowed!`);
+    }
+
     log.info(`Got version ${version.format()} from release event.`);
 
     if (version.build.length > 0) {
@@ -49,18 +53,26 @@ export function getReleaseVersion(release: Release, log: Logger): SemVer {
 
 export function getFallbackVersion(latestReleaseTag: string | null, buildRef: BuildRef, log: Logger): SemVer {
     const version = getNextVersion(latestReleaseTag, log);
-    version.prerelease = [getContinuousIntegrationSuffix(buildRef)];
+    version.prerelease = ['dev', buildRef.runNumber];
+    version.build = getBuildMetadata(buildRef);
 
-    if (version.build.length > 0) {
-        log.warning(`Version '${version.format()}' had build metadata '${version.build.join('.')}', it will be ignored.`);
-        version.build = [];
-    }
-
-    if (!semver.valid(version.format())) {
-        throw new Error(`Internal error: Version '${version.format()}' is not a valid semver!`);
+    if (!semver.valid(formatVersion(version))) {
+        throw new Error(`Internal error: Version '${formatVersion(version)}' is not a valid semver!`);
     }
 
     return version;
+}
+
+export function formatVersion(version: SemVer): string {
+    const build = version.build.length > 0 ? `+${version.build.join('.')}` : '';
+    return `${version.format()}${build}`;
+}
+
+function isAllowedPrerelease(prerelease: ReadonlyArray<string | number>): boolean {
+    const [label, number] = prerelease;
+    return prerelease.length == 2
+        && (label == 'alpha' || label == 'beta' || label == 'rc')
+        && typeof number == 'number';
 }
 
 function getNextVersion(latestReleaseTag: string | null, log: Logger): SemVer {
@@ -77,6 +89,11 @@ function getNextVersion(latestReleaseTag: string | null, log: Logger): SemVer {
 
     log.info(`Got most recent release version: ${version.format()}`);
 
+    if (version.build.length > 0) {
+        log.warning(`Most recent release '${latestReleaseTag}' has build metadata '${version.build.join('.')}', it will be ignored.`);
+        version.build = [];
+    }
+
     // If the version is a pre-release version, drop the pre-release and use the main version as-is since presumably the next release
     // will be this version (but without the pre-release part.)
     //
@@ -92,23 +109,16 @@ function getNextVersion(latestReleaseTag: string | null, log: Logger): SemVer {
     return version;
 }
 
-function getContinuousIntegrationSuffix({ ref, defaultBranch, runNumber }: BuildRef): string {
-    const suffix = `ci${runNumber}`;
+function getBuildMetadata({ ref, defaultBranch }: BuildRef): string[] {
     if (ref == `refs/heads/${defaultBranch}`) {
-        return suffix;
+        return [];
     }
 
-    // For all git refs besides the default branch, include the branch/tag name in the default version string
     //TODO: Might also be nice to include the fork owner if we're running from a fork. (Unfortunately the upstream repo doesn't seem to be in the context?)
-    let name = ref;
-    const branchPrefix = 'refs/heads/';
-    const tagPrefix = 'refs/tags/';
-    if (name.startsWith(branchPrefix)) {
-        name = name.substring(branchPrefix.length);
-    } else if (name.startsWith(tagPrefix)) {
-        name = `tag-${name.substring(tagPrefix.length)}`;
-    }
-
-    name = name.replace(/[^0-9A-Za-z-]/g, '-');
-    return `${name}-${suffix}`;
+    const name = ref
+        .replace(/^refs\//, '')
+        .replace(/[^0-9A-Za-z-]+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '');
+    return name ? [name] : [];
 }
