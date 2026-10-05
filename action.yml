@@ -11,13 +11,12 @@ inputs:
       docs/workflows/**/*.bonsai
       docs/examples/**/*.bonsai
   repo-token:
-    description: "The GitHub token used for interacting with the repository (you should not want or need to change this)"
+    description: "The GitHub token used to read the most recent release. The default is sufficient."
     required: true
     default: ${{ github.token }}
 outputs:
   need-workflow-image-render:
     description: "`true` if there are Bonsai workflows that need to be rendered for the documentation website."
-#outputs:
 runs:
   using: 'node24'
   main: 'dist/main.js'
